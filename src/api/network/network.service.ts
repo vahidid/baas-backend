@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { NodeService } from '../node/node.service';
 import { User } from '../user/user.entity';
 import { CreateNetworkDto } from './network.dto';
 import { Network } from './network.entity';
@@ -12,6 +13,9 @@ export class NetworkService {
 
   @InjectRepository(User)
   private readonly userRepository: Repository<User>;
+
+  @Inject(NodeService)
+  private readonly nodeService: NodeService;
 
   public getNetwork(id: number): Promise<Network> {
     return this.repository.findOne({
@@ -43,6 +47,18 @@ export class NetworkService {
     network.name = body.name;
     network.user = user;
 
-    return await this.repository.save(network);
+    const savedNetwork = await this.repository.save(network);
+
+    await Promise.all(
+      body.nodes.map(async (node) => {
+        const newNode = await this.nodeService.createNode({
+          ...node,
+          network_id: savedNetwork.id,
+        });
+        console.log(newNode);
+      }),
+    );
+
+    return savedNetwork;
   }
 }
