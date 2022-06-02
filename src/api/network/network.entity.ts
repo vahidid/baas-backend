@@ -1,23 +1,23 @@
 import {
-  Entity,
-  PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
+  Entity,
+  ManyToOne,
+  PrimaryGeneratedColumn,
   UpdateDateColumn,
-  OneToMany,
 } from 'typeorm';
-import { Network } from '../network/network.entity';
+import { User } from '../user/user.entity';
 
 @Entity()
-export class User {
+export class Network {
   @PrimaryGeneratedColumn()
   public id!: number;
 
   @Column({ type: 'varchar', length: 120 })
   public name: string;
 
-  @Column({ type: 'varchar', length: 120 })
-  public email: string;
+  @ManyToOne(() => User, (user) => user.networks)
+  public user: User;
 
   @Column({ type: 'boolean', default: false })
   public isDeleted: boolean;
@@ -31,11 +31,4 @@ export class User {
 
   @UpdateDateColumn({ type: 'timestamp' })
   public updatedAt!: Date;
-
-  /**
-   * Relationships
-   */
-
-  @OneToMany(() => Network, (network) => network.user)
-  public networks: Network[];
 }
