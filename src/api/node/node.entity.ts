@@ -7,6 +7,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { Network } from '../network/network.entity';
+import { NodeStatus } from './node.types';
 
 @Entity()
 export class Node {
@@ -27,6 +28,12 @@ export class Node {
 
   @Column({ type: 'varchar', length: 120 })
   public jsonrpc_port: number;
+
+  @Column({ type: 'varchar', length: 120, nullable: true })
+  public pid?: number;
+
+  @Column({ type: 'enum', enum: NodeStatus, default: NodeStatus.Deactive })
+  public status?: NodeStatus;
 
   /*
    * Create and Update Date Columns
