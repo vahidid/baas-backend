@@ -1,9 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { execShellCommand } from 'src/common/helper/command.helper';
 import { Repository } from 'typeorm';
 import { NodeService } from '../node/node.service';
 import { User } from '../user/user.entity';
-import { CreateNetworkDto } from './network.dto';
+import { CreateNetworkDto, GenerateGenesisBlockDto } from './network.dto';
 import { Network } from './network.entity';
 
 @Injectable()
@@ -60,5 +61,33 @@ export class NetworkService {
     );
 
     return savedNetwork;
+  }
+
+  public async generateGenesisBlock(
+    body: GenerateGenesisBlockDto,
+    networkId: number,
+  ): Promise<Network> {
+    const network = await this.getNetwork(networkId);
+
+    // TODO: remove ibft-validators-prefix-path in production
+    let command = `cd /bc && polygon-edge genesis --consensus ibft --ibft-validators-prefix-path Node ${
+      body.premine ? '--premine ' + body.premine : ''
+    }`;
+
+    await Promise.all(
+      body.bootnodes.map(async (bootnode) => {
+        const node = await this.nodeService.getNodeByNodeId(bootnode);
+        command += ` --bootnode /ip4/127.0.0.1/tcp/${node.libp2p_port}/p2p/${node.node_id}`;
+        return node;
+      }),
+    );
+
+    // Cd to blockchain directory
+    // await execShellCommand('cd /bc');
+
+    const genesisBlock = await execShellCommand(command);
+
+    console.log(genesisBlock);
+    return network;
   }
 }

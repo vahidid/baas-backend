@@ -8,7 +8,7 @@ import {
   ParseIntPipe,
   Post,
 } from '@nestjs/common';
-import { CreateNetworkDto } from './network.dto';
+import { CreateNetworkDto, GenerateGenesisBlockDto } from './network.dto';
 import { Network } from './network.entity';
 import { NetworkService } from './network.service';
 
@@ -32,5 +32,13 @@ export class NetworkController {
   @Post()
   public createNetwork(@Body() body: CreateNetworkDto): Promise<Network> {
     return this.service.createNetwork(body);
+  }
+
+  @Post('genesis-block/:id')
+  public generateGenesisBlock(
+    @Body() body: GenerateGenesisBlockDto,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<Network> {
+    return this.service.generateGenesisBlock(body, id);
   }
 }

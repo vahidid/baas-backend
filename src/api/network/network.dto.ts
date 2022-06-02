@@ -21,3 +21,12 @@ export class CreateNetworkDto {
   @ValidateNested()
   public nodes!: CreateNodeDto[];
 }
+
+export class GenerateGenesisBlockDto {
+  @IsArray()
+  @IsNotEmpty()
+  public bootnodes: string[];
+
+  @IsString()
+  public premine!: string;
+}

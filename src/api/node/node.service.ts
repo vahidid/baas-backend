@@ -23,27 +23,6 @@ export class NodeService {
 
     const newNode: Node = new Node();
 
-    // exec(`mkdir -p /bc/${node.node_name}`);
-
-    // exec(
-    //   `polygon-edge secrets init --data-dir /bc/${node.node_name}`,
-    //   (err, stdout, stderr) => {
-    //     if (err) {
-    //       console.log(`error: ${err.message}`);
-    //       return;
-    //     }
-    //     if (stderr) {
-    //       console.log(`stderr: ${stderr}`);
-    //       return;
-    //     }
-
-    //     const splitedRes = stdout.split('=');
-    //     newNode.node_id = splitedRes[splitedRes.length - 1]
-    //       .trim()
-    //       .replace(/\n/g, '');
-    //   },
-    // );
-
     // Make data directory
     await execShellCommand(`mkdir -p /bc/${node.node_name}`);
 
@@ -64,5 +43,13 @@ export class NodeService {
     newNode.network = network;
 
     return this.repository.save(newNode);
+  }
+
+  public async getNodeByNodeId(nodeId: string): Promise<Node> {
+    return await this.repository.findOne({
+      where: {
+        node_id: nodeId,
+      },
+    });
   }
 }
