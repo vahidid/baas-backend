@@ -11,6 +11,8 @@ async function bootstrap() {
 
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
+  app.enableCors();
+
   await app.listen(port, () => {
     console.log('[WEB]', config.get<string>('BASE_URL'));
   });

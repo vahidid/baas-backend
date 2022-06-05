@@ -6,7 +6,8 @@ import { NodeService } from '../node/node.service';
 import { User } from '../user/user.entity';
 import { CreateNetworkDto, GenerateGenesisBlockDto } from './network.dto';
 import { Network } from './network.entity';
-
+import { ICreateNetworkReponse, IGetNetworkReponse } from './network.types';
+import * as fs from 'fs';
 @Injectable()
 export class NetworkService {
   @InjectRepository(Network)
@@ -18,12 +19,25 @@ export class NetworkService {
   @Inject(NodeService)
   private readonly nodeService: NodeService;
 
-  public getNetwork(id: number): Promise<Network> {
-    return this.repository.findOne({
+  public async getNetwork(id: number): Promise<IGetNetworkReponse> {
+    const network: Network = await this.repository.findOne({
       where: {
         id,
       },
+      relations: ['user', 'nodes'],
     });
+    let genesisJSON;
+    try {
+      const rawGenesis = fs.readFileSync('/bc/genesis.json');
+      genesisJSON = JSON.parse(rawGenesis.toString());
+    } catch (error) {
+      genesisJSON = {};
+    }
+
+    return {
+      network,
+      genesis: genesisJSON,
+    };
   }
 
   public async getUserNetworks(userId: number): Promise<Network[]> {
@@ -36,7 +50,9 @@ export class NetworkService {
     });
   }
 
-  public async createNetwork(body: CreateNetworkDto): Promise<Network> {
+  public async createNetwork(
+    body: CreateNetworkDto,
+  ): Promise<ICreateNetworkReponse> {
     const user = await this.userRepository.findOne({
       where: {
         id: body.user_id,
@@ -50,17 +66,23 @@ export class NetworkService {
 
     const savedNetwork = await this.repository.save(network);
 
+    const res: ICreateNetworkReponse = {
+      network: savedNetwork,
+      nodes: [],
+    };
+
     await Promise.all(
       body.nodes.map(async (node) => {
         const newNode = await this.nodeService.createNode({
           ...node,
           network_id: savedNetwork.id,
         });
-        console.log(newNode);
+
+        res.nodes.push(newNode);
       }),
     );
 
-    return savedNetwork;
+    return res;
   }
 
   public async generateGenesisBlock(
@@ -70,7 +92,7 @@ export class NetworkService {
     const network = await this.getNetwork(networkId);
 
     // TODO: remove ibft-validators-prefix-path in production
-    let command = `cd /bc && polygon-edge genesis --consensus ibft --ibft-validators-prefix-path Node ${
+    let command = `cd /bc && polygon-edge genesis --consensus ibft --ibft-validators-prefix-path test-node- ${
       body.premine ? '--premine ' + body.premine : ''
     }`;
 
@@ -88,6 +110,6 @@ export class NetworkService {
     const genesisBlock = await execShellCommand(command);
 
     console.log(genesisBlock);
-    return network;
+    return network.network;
   }
 }

@@ -6,7 +6,8 @@ import { Repository } from 'typeorm';
 import { Network } from '../network/network.entity';
 import { CreateNodeDto } from './node.dto';
 import { Node } from './node.entity';
-import { NodeStatus } from './node.types';
+import { ICreateNodeResponse, NodeStatus } from './node.types';
+import * as fs from 'fs';
 
 @Injectable()
 export class NodeService {
@@ -16,7 +17,7 @@ export class NodeService {
   @InjectRepository(Network)
   private readonly networkRepository: Repository<Network>;
 
-  public async createNode(node: CreateNodeDto): Promise<Node> {
+  public async createNode(node: CreateNodeDto): Promise<ICreateNodeResponse> {
     const network = await this.networkRepository.findOne({
       where: {
         id: node.network_id,
@@ -44,7 +45,16 @@ export class NodeService {
     newNode.jsonrpc_port = node.jsonrpc_port;
     newNode.network = network;
 
-    return this.repository.save(newNode);
+    await this.repository.save(newNode);
+
+    return {
+      node: newNode,
+      privateKey: splitedRes[1]
+        .trim()
+        .replace(/\n/g, '')
+        .replace('Node ID', ''),
+      nodeId: newNode.node_id,
+    };
   }
 
   public async getNodeByNodeId(nodeId: string): Promise<Node> {
@@ -58,10 +68,15 @@ export class NodeService {
   public async runNodeByNodeId(nodeId: string): Promise<Node> {
     const node = await this.getNodeByNodeId(nodeId);
 
+    const out = fs.openSync(`/bc/${node.node_name}/out.log`, 'a');
+    const err = fs.openSync(`/bc/${node.node_name}/out.log`, 'a');
+
     const execRes = spawn(
       'polygon-edge',
       [
         'server',
+        '--prometheus',
+        `:900${node.grpc_port.toString().slice(0, 1)}`,
         '--data-dir',
         `/bc/${node.node_name}`,
         '--chain',
@@ -74,7 +89,7 @@ export class NodeService {
         `:${node.jsonrpc_port}`,
         '--seal',
       ],
-      { detached: true, stdio: 'ignore' },
+      { detached: true, stdio: ['ignore', out, err] },
     );
 
     execRes.unref();
@@ -83,5 +98,28 @@ export class NodeService {
     node.status = NodeStatus.Running;
     this.repository.save(node);
     return node;
+  }
+
+  public async killNodeByNodeId(nodeId: string): Promise<Node> {
+    const node = await this.getNodeByNodeId(nodeId);
+
+    try {
+      await execShellCommand(`kill ${node.pid}`);
+    } catch (error) {}
+
+    node.status = NodeStatus.Deactive;
+    node.pid = null;
+    this.repository.save(node);
+    return node;
+  }
+
+  public async getNodesByNetworkId(networkId: number): Promise<Node[]> {
+    return await this.repository.find({
+      where: {
+        network: {
+          id: networkId,
+        },
+      },
+    });
   }
 }

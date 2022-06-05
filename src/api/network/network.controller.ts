@@ -11,6 +11,7 @@ import {
 import { CreateNetworkDto, GenerateGenesisBlockDto } from './network.dto';
 import { Network } from './network.entity';
 import { NetworkService } from './network.service';
+import { ICreateNetworkReponse, IGetNetworkReponse } from './network.types';
 
 @Controller('networks')
 export class NetworkController {
@@ -25,12 +26,16 @@ export class NetworkController {
   }
 
   @Get(':id')
-  public getNetwork(@Param('id', ParseIntPipe) id: number): Promise<Network> {
+  public getNetwork(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<IGetNetworkReponse> {
     return this.service.getNetwork(id);
   }
 
   @Post()
-  public createNetwork(@Body() body: CreateNetworkDto): Promise<Network> {
+  public createNetwork(
+    @Body() body: CreateNetworkDto,
+  ): Promise<ICreateNetworkReponse> {
     return this.service.createNetwork(body);
   }
 
