@@ -66,14 +66,14 @@ export class NetworkService {
 
     const savedNetwork = await this.repository.save(network);
 
-    const res: ICreateNetworkReponse = {
+    const res: any = {
       network: savedNetwork,
       nodes: [],
     };
 
     await Promise.all(
       body.nodes.map(async (node) => {
-        const newNode = await this.nodeService.createNode({
+        const newNode = await this.nodeService.createNodeWithDocker({
           ...node,
           network_id: savedNetwork.id,
         });

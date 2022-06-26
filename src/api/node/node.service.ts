@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { spawn } from 'child_process';
 import { execShellCommand } from 'src/common/helper/command.helper';
@@ -8,6 +8,7 @@ import { CreateNodeDto } from './node.dto';
 import { Node } from './node.entity';
 import { ICreateNodeResponse, NodeStatus } from './node.types';
 import * as fs from 'fs';
+import { DockerService } from 'src/facade/docker/docker.service';
 
 @Injectable()
 export class NodeService {
@@ -16,6 +17,9 @@ export class NodeService {
 
   @InjectRepository(Network)
   private readonly networkRepository: Repository<Network>;
+
+  @Inject(DockerService)
+  private readonly dockerService: DockerService;
 
   public async createNode(node: CreateNodeDto): Promise<ICreateNodeResponse> {
     const network = await this.networkRepository.findOne({
@@ -121,5 +125,55 @@ export class NodeService {
         },
       },
     });
+  }
+
+  public async createNodeWithDocker(
+    node: CreateNodeDto,
+  ): Promise<ICreateNodeResponse> {
+    const network = await this.networkRepository.findOne({
+      where: {
+        id: node.network_id,
+      },
+    });
+
+    const newNode: Node = new Node();
+
+    const container = await this.dockerService.createContainer(
+      node.node_name,
+      '0xpolygon/polygon-edge:latest',
+      ['secrets', 'init', '--data-dir', `/bc/${node.node_name}`],
+    );
+
+    const splitedRes = container.logs.split('=');
+    newNode.node_id = splitedRes[splitedRes.length - 1]
+      .trim()
+      .replace(/\n/g, '');
+
+    console.log(splitedRes);
+    // console.log(container.container.id);
+
+    newNode.node_name = node.node_name;
+    newNode.grpc_port = node.grpc_port;
+    newNode.libp2p_port = node.libp2p_port;
+    newNode.jsonrpc_port = node.jsonrpc_port;
+    newNode.network = network;
+    newNode.containerId = container.container.id;
+
+    await this.repository.save(newNode);
+
+    return {
+      node: newNode,
+      privateKey: splitedRes[1]
+        .trim()
+        .replace(/\n/g, '')
+        .replace('Node ID', ''),
+      nodeId: newNode.node_id,
+    };
+  }
+
+  public async runNodeWithDocker(nodeId: string) {
+    const node = await this.getNodeByNodeId(nodeId);
+
+    // await this.dockerService.runContainer('0xpolygon/polygon-edge:latest');
   }
 }

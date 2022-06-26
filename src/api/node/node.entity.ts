@@ -32,6 +32,9 @@ export class Node {
   @Column({ type: 'varchar', length: 120, nullable: true })
   public pid?: number;
 
+  @Column({ type: 'varchar', length: 220, nullable: true })
+  public containerId?: string;
+
   @Column({ type: 'enum', enum: NodeStatus, default: NodeStatus.Deactive })
   public status?: NodeStatus;
 
