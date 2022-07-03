@@ -82,4 +82,16 @@ export class DockerService {
   public async runContainer(imageName: string, args: string[]) {
     return await this.docker.run(imageName, args, process.stdout);
   }
+
+  public async createVolume(
+    title: string,
+  ): Promise<Docker.VolumeCreateResponse> {
+    return await this.docker.createVolume({
+      Name: title,
+      Labels: {
+        'com.baas-service.volume.scope': 'local',
+      },
+      Driver: 'local',
+    });
+  }
 }

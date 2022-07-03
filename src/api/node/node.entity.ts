@@ -15,7 +15,7 @@ export class Node {
   public id!: number;
 
   @Column({ type: 'varchar', length: 120 })
-  public node_id: string;
+  public node_id: string; // Public Key
 
   @Column({ type: 'varchar', length: 120 })
   public node_name: string;

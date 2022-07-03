@@ -9,6 +9,7 @@ import { Node } from './node.entity';
 import { ICreateNodeResponse, NodeStatus } from './node.types';
 import * as fs from 'fs';
 import { DockerService } from 'src/facade/docker/docker.service';
+import TOMLParser from '@iarna/toml';
 
 @Injectable()
 export class NodeService {
@@ -175,5 +176,14 @@ export class NodeService {
     const node = await this.getNodeByNodeId(nodeId);
 
     // await this.dockerService.runContainer('0xpolygon/polygon-edge:latest');
+  }
+
+  public async createStellarNode(node: CreateNodeDto) {
+    fs.writeFileSync(
+      './test.cfg',
+      TOMLParser.stringify({
+        NODE_SEED: 'test',
+      }),
+    );
   }
 }
