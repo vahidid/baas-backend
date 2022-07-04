@@ -9,5 +9,6 @@ import { Volume } from './volume.entity';
   imports: [DockerModule, TypeOrmModule.forFeature([Volume])],
   providers: [VolumeService],
   controllers: [VolumeController],
+  exports: [VolumeService],
 })
 export class VolumeModule {}

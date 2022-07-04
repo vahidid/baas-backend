@@ -13,11 +13,3 @@ export interface ICreateNodeResponse {
   privateKey: string;
   nodeId: string;
 }
-
-export interface ICreateStellarNodeRequest {
-  node_name: string;
-  peer_port: string;
-  http_port: string;
-  passphrase: string;
-  home_domains: HOME_DOMAIN[];
-}

@@ -4,12 +4,14 @@ import { spawn } from 'child_process';
 import { execShellCommand } from 'src/common/helper/command.helper';
 import { Repository } from 'typeorm';
 import { Network } from '../network/network.entity';
-import { CreateNodeDto } from './node.dto';
+import { CreateNodeDto, CreateStellarNodeDto } from './node.dto';
 import { Node } from './node.entity';
 import { ICreateNodeResponse, NodeStatus } from './node.types';
 import * as fs from 'fs';
 import { DockerService } from 'src/facade/docker/docker.service';
 import TOMLParser from '@iarna/toml';
+import { VolumeService } from '../volume/volume.service';
+import { StellarService } from 'src/facade/stellar/stellar.service';
 
 @Injectable()
 export class NodeService {
@@ -21,6 +23,12 @@ export class NodeService {
 
   @Inject(DockerService)
   private readonly dockerService: DockerService;
+
+  @Inject(VolumeService)
+  private readonly volumeService: VolumeService;
+
+  @Inject(StellarService)
+  private readonly stellarService: StellarService;
 
   public async createNode(node: CreateNodeDto): Promise<ICreateNodeResponse> {
     const network = await this.networkRepository.findOne({
@@ -178,12 +186,59 @@ export class NodeService {
     // await this.dockerService.runContainer('0xpolygon/polygon-edge:latest');
   }
 
-  public async createStellarNode(node: CreateNodeDto) {
-    fs.writeFileSync(
-      './test.cfg',
-      TOMLParser.stringify({
-        NODE_SEED: 'test',
-      }),
+  public async createStellarNode(node: CreateStellarNodeDto) {
+    const volume = await this.volumeService.createVolume(node.node_name);
+
+    console.log('VOLUME: ', volume);
+
+    const seed = this.stellarService.genSeed();
+
+    console.log('SEED: ', seed);
+
+    // Get default config
+    const defaultConfig = this.stellarService.defaultConfigFile();
+
+    // Rewrite config file with new values
+    this.stellarService.rewriteConfigFile(node.node_name, {
+      ...defaultConfig,
+      BUCKET_DIR_PATH: `${volume.path}/bucket`,
+      NETWORK_PASSPHRASE: node.passphrase,
+      NODE_SEED: seed.secret(),
+      HTTP_PORT: node.http_port,
+      PEER_PORT: node.peer_port,
+      NODE_HOME_DOMAIN: node.home_domains[0].home_domain,
+      HISTORY: {
+        local: {
+          get: `cp ${volume.path}/history/{0} {1}`,
+          put: `cp {0} ${volume.path}/history/{1}`,
+          mkdir: `mkdir -p ${volume.path}/history/{0}`,
+        },
+      },
+      HOME_DOMAINS: node.home_domains.map((item) => ({
+        HOME_DOMAIN: item.home_domain,
+        QUALITY: item.quality,
+      })),
+    });
+
+    // Copy file to volume
+    await execShellCommand(
+      `mkdir -p ${volume.path} && cp ./stellar/${node.node_name}/stellar-core.cfg ${volume.path}/`,
     );
+
+    const newDBcontainer = await this.dockerService.createContainer(
+      `${node.node_name}-db`,
+      'stellar/stellar-core:19',
+      ['new-db'],
+      [volume],
+    );
+
+    const newHistContainer = await this.dockerService.createContainer(
+      `${node.node_name}-hist`,
+      'stellar/stellar-core:19',
+      ['new-hist', 'local'],
+      [volume],
+    );
+
+    return;
   }
 }

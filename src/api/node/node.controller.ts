@@ -1,4 +1,5 @@
 import {
+  Body,
   Controller,
   Get,
   Header,
@@ -17,6 +18,7 @@ import { interval, Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import * as es from 'event-stream';
 import * as Docker from 'dockerode';
+import { CreateStellarNodeDto } from './node.dto';
 
 @Controller('nodes')
 export class NodeController {
@@ -115,5 +117,10 @@ export class NodeController {
 
       // observer.next(eventResponse);
     }).pipe(map((event: MessageEvent) => event));
+  }
+
+  @Post('/stellar')
+  public async createStellarNode(@Body() body: CreateStellarNodeDto) {
+    return await this.service.createStellarNode(body);
   }
 }

@@ -20,14 +20,14 @@ export class Node {
   @Column({ type: 'varchar', length: 120 })
   public node_name: string;
 
-  @Column({ type: 'varchar', length: 120 })
-  public grpc_port: number;
+  @Column({ type: 'varchar', length: 120, nullable: true })
+  public grpc_port?: number;
 
-  @Column({ type: 'varchar', length: 120 })
-  public libp2p_port: number;
+  @Column({ type: 'varchar', length: 120, nullable: true })
+  public libp2p_port?: number;
 
-  @Column({ type: 'varchar', length: 120 })
-  public jsonrpc_port: number;
+  @Column({ type: 'varchar', length: 120, nullable: true })
+  public jsonrpc_port?: number;
 
   @Column({ type: 'varchar', length: 120, nullable: true })
   public pid?: number;
@@ -38,10 +38,19 @@ export class Node {
   @Column({ type: 'enum', enum: NodeStatus, default: NodeStatus.Deactive })
   public status?: NodeStatus;
 
+  // Stellar Options
+  @Column({ type: 'varchar', length: 120, nullable: true })
+  public peer_port?: number;
+
+  @Column({ type: 'varchar', length: 120, nullable: true })
+  public http_port?: number;
+
+  @Column({ type: 'varchar', length: 120, nullable: true })
+  public passphrase?: string;
+
   /*
    * Create and Update Date Columns
    */
-
   @CreateDateColumn({ type: 'timestamp' })
   public createdAt!: Date;
 
